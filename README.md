@@ -176,6 +176,28 @@ This approach enables the model to capture not just intra-layer dependencies but
 
 The ILTs are active and functional during both training and inference, integrated into the model's forward pass to learn and apply hierarchical patterns in real-time.
 
+### ILT Hyperparameters
+
+The `InterLayerTransformer` (ILT) components have several hyperparameters that control their architecture and behavior. These are set in the `HierarchicalTransformer.__init__` method and passed to each ILT instance. Below is a breakdown of each hyperparameter, including its default value, what it controls, and how changing it might affect the model.
+
+1. **`ilt_dim` (default: 128)**  
+   - **What it does**: The internal dimensionality of the ILT's representations, projected from the main model's `d_model` (default 256).  
+   - **Impact**: Lower values reduce parameters and computation but may limit pattern capture. Higher values increase expressiveness but add cost.
+
+2. **`nhead_ilt` (default: 2)**  
+   - **What it does**: Number of attention heads in each ILT transformer layer.  
+   - **Impact**: Fewer heads simplify the model; more heads allow diverse attention patterns but increase computation. Must divide `ilt_dim` evenly.
+
+3. **`n_layers_ilt` (default: 2)**  
+   - **What it does**: Number of stacked transformer layers in the ILT.  
+   - **Impact**: Fewer layers reduce depth and computation; more layers allow complex dependencies but add parameters.
+
+4. **`dropout` (default: 0.1)**  
+   - **What it does**: Dropout probability in ILT layers, inherited from the main model.  
+   - **Impact**: Lower values reduce regularization; higher values help generalization.
+
+**Additional Notes**: The ILT uses `d_ff = ilt_dim * 4` internally. Tune these based on dataset and monitor metrics like perplexity.
+
 ### Key Features
 
 - **Causal Masking**: Ensures autoregressive generation by masking future tokens during training and inference.
