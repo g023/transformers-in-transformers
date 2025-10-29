@@ -30,7 +30,6 @@ The model is trained on text data to generate coherent sequences and supports fe
 - **Enhanced Checkpointing**: Saves complete training state including model, optimizer, scheduler, scaler, epoch, and metrics.
 - **Resume Training**: Full support for resuming interrupted training with all state preserved.
 - **Best Model Tracking**: Automatically saves best-performing model based on validation loss.
-- **Periodic Checkpoints**: Saves checkpoints every 5 epochs for recovery and experimentation.
 
 ### Generation & Inference
 - **Text Generation with Sampling Control**: Supports temperature-based sampling for deterministic or creative outputs.
@@ -100,7 +99,7 @@ python train.py --text_file data.txt --batch_size 32 --seq_len 128 --epochs 10 -
 - `--scheduler`: Learning rate scheduler type - `cosine`, `step`, or `none` (default: `cosine`)
 
 **Checkpointing:**
-- `--resume`: Resume training from checkpoint path (e.g., `best_model.pt` or `checkpoint_epoch_5.pt`)
+- `--resume`: Resume training from checkpoint path (e.g., `best_model.pt`)
 
 ### Training Process
 
@@ -112,7 +111,6 @@ The script will:
   - Average gradient norms
   - Current learning rate
 - Save the best model based on validation loss as `best_model.pt`
-- Save periodic checkpoints every 5 epochs as `checkpoint_epoch_N.pt`
 - Support resuming from any checkpoint with full training state restoration
 
 ### Example Training Outputs
@@ -196,7 +194,6 @@ The hierarchical structure allows the model to capture not just token-level depe
 - `build_vocab.py`: Script to display information about the standard GPT-2 tokenizer.
 - `data.txt`: Sample training data (Shakespeare excerpts).
 - `best_model.pt`: Best-performing model checkpoint with full training state.
-- `checkpoint_epoch_N.pt`: Periodic checkpoints saved every 5 epochs.
 
 ## Checkpoint Structure
 
@@ -241,8 +238,7 @@ This allows for seamless resumption of training with all state preserved.
 - **Prompt Engineering**: Longer, more specific prompts generally produce better results.
 
 ### Checkpointing
-- **Resume Training**: Use `--resume best_model.pt` to continue from the best checkpoint, or `--resume checkpoint_epoch_10.pt` for a specific epoch.
-- **Disk Space**: Periodic checkpoints can consume significant space; delete old ones if needed.
+- **Resume Training**: Use `--resume best_model.pt` to continue from the best checkpoint.
 
 ## Performance Metrics
 
