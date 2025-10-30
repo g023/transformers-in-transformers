@@ -184,7 +184,7 @@ To further enhance the ILTs' role in training, the model implements **curriculum
 - **Modulation Scale**: Each ILT generates a modulation signal that is added to the output of the next main layer. The strength of this modulation is controlled by a `modulation_scale` parameter (default: 0.1).
 - **Curriculum Schedule**: During training, `modulation_scale` starts low (0.01) in early epochs and linearly increases to the full value (0.1) by the final epoch. This is computed as:
   ```
-  modulation_scale = 0.01 + (current_epoch / total_epochs) * 0.09
+  modulation_scale = MODULATION_SCALE_START + (current_epoch / total_epochs) * (MODULATION_SCALE_END - MODULATION_SCALE_START)
   ```
 - **Benefits**:
   - **Stabilizes Training**: Early epochs focus on basic layer learning without heavy ILT interference, reducing instability.
@@ -196,25 +196,33 @@ This curriculum approach is simple, requires no additional components, and lever
 
 ### ILT Hyperparameters
 
-The `InterLayerTransformer` (ILT) components have several hyperparameters that control their architecture and behavior. These are set in the `HierarchicalTransformer.__init__` method and passed to each ILT instance. Below is a breakdown of each hyperparameter, including its default value, what it controls, and how changing it might affect the model.
+The `InterLayerTransformer` (ILT) components have several hyperparameters that control their architecture and behavior. These are defined as global constants at the top of `model.py` for easy tuning. Below is a breakdown of each hyperparameter, including its default value, what it controls, and how changing it might affect the model.
 
-1. **`ilt_dim` (default: 128)**  
+1. **`ILT_DIM` (default: 128)**  
    - **What it does**: The internal dimensionality of the ILT's representations, projected from the main model's `d_model` (default 256).  
    - **Impact**: Lower values reduce parameters and computation but may limit pattern capture. Higher values increase expressiveness but add cost.
 
-2. **`nhead_ilt` (default: 2)**  
+2. **`NHEAD_ILT` (default: 2)**  
    - **What it does**: Number of attention heads in each ILT transformer layer.  
-   - **Impact**: Fewer heads simplify the model; more heads allow diverse attention patterns but increase computation. Must divide `ilt_dim` evenly.
+   - **Impact**: Fewer heads simplify the model; more heads allow diverse attention patterns but increase computation. Must divide `ILT_DIM` evenly.
 
-3. **`n_layers_ilt` (default: 2)**  
+3. **`N_LAYERS_ILT` (default: 2)**  
    - **What it does**: Number of stacked transformer layers in the ILT.  
    - **Impact**: Fewer layers reduce depth and computation; more layers allow complex dependencies but add parameters.
 
-4. **`dropout` (default: 0.1)**  
-   - **What it does**: Dropout probability in ILT layers, inherited from the main model.  
-   - **Impact**: Lower values reduce regularization; higher values help generalization.
+4. **`ILT_DROPOUT` (default: 0.1)**  
+   - **What it does**: Dropout probability specifically for ILT layers.  
+   - **Impact**: Lower values reduce regularization; higher values help generalization. Separate from main model dropout for independent tuning.
 
-**Additional Notes**: The ILT uses `d_ff = ilt_dim * 4` internally. Tune these based on dataset and monitor metrics like perplexity.
+5. **`MODULATION_SCALE_START` (default: 0.01)**  
+   - **What it does**: Initial modulation scale for curriculum learning, controlling ILT influence at training start.  
+   - **Impact**: Lower values prioritize main layer learning early; higher values introduce ILT effects sooner.
+
+6. **`MODULATION_SCALE_END` (default: 0.1)**  
+   - **What it does**: Final modulation scale for curriculum learning, setting full ILT influence by training end.  
+   - **Impact**: Determines maximum ILT impact; tune based on desired hierarchical strength.
+
+**Additional Notes**: The ILT uses `d_ff = ILT_DIM * 4` internally. Tune these global constants in `model.py` based on dataset and monitor metrics like perplexity.
 
 ### Key Features
 
@@ -223,7 +231,19 @@ The `InterLayerTransformer` (ILT) components have several hyperparameters that c
 - **Standard GPT-2 Tokenizer**: Uses pre-trained tokenizer with ~50k vocabulary, no custom training required.
 - **Embedding and Language Modeling Head**: Embeddings for input and linear head for next-token prediction.
 
-The hierarchical structure allows the model to capture not just token-level dependencies but also layer-level interactions, potentially leading to better generalization and performance on complex language tasks.
+### Global Hyperparameters
+
+The model uses several global constants defined at the top of `model.py` for easy configuration and tuning:
+
+- **`DROPOUT` (default: 0.1)**: Dropout probability applied throughout the main model components (attention, feed-forward, etc.) for regularization.
+- **`ILT_DROPOUT` (default: 0.1)**: Separate dropout probability for Inter-Layer Transformers, allowing independent tuning of ILT regularization.
+- **`ILT_DIM` (default: 128)**: Internal dimensionality of ILT representations.
+- **`NHEAD_ILT` (default: 2)**: Number of attention heads in ILT layers.
+- **`N_LAYERS_ILT` (default: 2)**: Number of transformer layers in each ILT.
+- **`MODULATION_SCALE_START` (default: 0.01)**: Initial ILT modulation scale for curriculum learning.
+- **`MODULATION_SCALE_END` (default: 0.1)**: Final ILT modulation scale for curriculum learning.
+
+These constants can be modified directly in `model.py` to experiment with different configurations without changing the code structure.
 
 ## Files
 
