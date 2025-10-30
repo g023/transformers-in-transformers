@@ -176,6 +176,24 @@ This approach enables the model to capture not just intra-layer dependencies but
 
 The ILTs are active and functional during both training and inference, integrated into the model's forward pass to learn and apply hierarchical patterns in real-time.
 
+### Training Assistance with ILTs: Curriculum Learning
+
+To further enhance the ILTs' role in training, the model implements **curriculum learning** for ILT modulation. This technique gradually increases the influence of ILT modulation signals during training, allowing the main transformer layers to first learn fundamental token-level patterns before incorporating complex inter-layer hierarchical refinements.
+
+#### How It Works
+- **Modulation Scale**: Each ILT generates a modulation signal that is added to the output of the next main layer. The strength of this modulation is controlled by a `modulation_scale` parameter (default: 0.1).
+- **Curriculum Schedule**: During training, `modulation_scale` starts low (0.01) in early epochs and linearly increases to the full value (0.1) by the final epoch. This is computed as:
+  ```
+  modulation_scale = 0.01 + (current_epoch / total_epochs) * 0.09
+  ```
+- **Benefits**:
+  - **Stabilizes Training**: Early epochs focus on basic layer learning without heavy ILT interference, reducing instability.
+  - **Improves Convergence**: Gradual introduction of hierarchical patterns helps the model build knowledge incrementally, potentially leading to better final performance.
+  - **Reduces Overfitting**: By allowing layers to establish strong foundations first, the model may generalize better to unseen data.
+- **Implementation**: The `modulation_scale` is passed as a parameter to `HierarchicalTransformer.forward()`. In `train.py`, it's calculated per epoch and applied during training. Validation uses the full scale (0.1) for consistency.
+
+This curriculum approach is simple, requires no additional components, and leverages the existing ILT architecture to make training more effective and robust.
+
 ### ILT Hyperparameters
 
 The `InterLayerTransformer` (ILT) components have several hyperparameters that control their architecture and behavior. These are set in the `HierarchicalTransformer.__init__` method and passed to each ILT instance. Below is a breakdown of each hyperparameter, including its default value, what it controls, and how changing it might affect the model.
@@ -300,4 +318,10 @@ python inference.py --model_path best_model.pt --prompt "There was" --temperatur
 python inference.py --model_path best_model.pt --prompt "There was" --top_p 0.45
 python inference.py --model_path best_model.pt --prompt "There was" --temperature 0.1
 python inference.py --model_path best_model.pt --prompt "There was" --temperature 0.45 --use_cache
+
+--
+
+python train.py --text_file stories_1M_paras.txt --resume best_model.pt --epochs 25 --batch_size 18 --model_dim 256 --lr 2e-4 --seq_len 512 --gradient_accumulation_steps 512
+
+
 ```
