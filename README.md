@@ -309,6 +309,32 @@ The training process tracks several key metrics:
 - **Gradient Norm**: Average gradient magnitude; useful for detecting training instability
 - **Learning Rate**: Current learning rate from scheduler
 
+## Model Insights and Analysis
+
+### Evaluating Training Metrics
+Based on the training output (e.g., "Train Loss: 4.1615 | Train Perplexity: 64.17 | Val Loss: 4.6709 | Val Perplexity: 106.79 | Avg Grad Norm: 0.3553 | Learning Rate: 0.000154"), here are insights on what constitutes "good" metrics for this Hierarchical Transformer:
+
+- **Train Loss & Perplexity**: Should decrease steadily (e.g., from ~5-6 early to <3-4 later). Perplexity often starts 50-100+ and aims for <20-30 by convergence. Your values (4.16 loss, 64 perplexity) are solid for mid-training (epoch 3/25), indicating learning progress.
+- **Val Loss & Perplexity**: Mirrors train trends but slightly higher (gap <0.5-1.0 ideal). Your gap (~0.5) shows mild overfitting—normal, but widen gaps suggest adding regularization like dropout.
+- **Avg Grad Norm**: Stable <10 (your 0.355 is excellent); spikes indicate instability.
+- **Learning Rate**: Decays smoothly (cosine annealing); promotes convergence.
+
+Monitor for continued decline; if val perplexity stalls >50 long-term, consider more epochs or data. Additional metrics like BLEU scores or sample generations can assess quality.
+
+### ILTs and Long-Context Inference
+The Inter-Layer Transformers (ILTs) indirectly help the model handle sequences longer than trained `seq_len` (e.g., trained on 128 tokens but generating 500+). They don't extend the attention window directly (that's via KV cache and positional encodings up to `max_len=1024`), but enhance hierarchical representation learning for better coherence and extrapolation.
+
+- **How it works**: ILTs modulate layer outputs based on inter-layer patterns, teaching the model to build multi-level dependencies that scale to longer contexts.
+- **Benefits**: Improves quality in long generations by refining embeddings, reducing incoherence. Without ILTs, it's a standard transformer; with them, hierarchy aids generalization.
+- **Limitations**: Won't fix attention dilution on very long sequences (e.g., 2000+ tokens); quality still degrades without sparse attention. Test with/without ILTs on long prompts to compare perplexity or coherence.
+
+### ILTs and Regularization
+ILTs contribute to regularization, helping prevent overfitting and promote generalization:
+
+- **Directly**: ILT-specific dropout (0.1 default) adds noise to inter-layer learning, separate from main model dropout. Curriculum learning ramps modulation scale (0.01 to 0.1) gradually, easing the model into complex behaviors.
+- **Indirectly**: Increases structured complexity, encouraging robust representations. Lightweight design (e.g., `ILT_DIM=128`) balances expressiveness with constraints.
+- **Tuning**: If overfitting (high train/val gap), increase `ILT_DROPOUT` or adjust scales. Without ILTs, rely on main dropout and weight decay—ILTs enhance this.
+
 ## Troubleshooting
 
 - **CUDA Availability**: Ensure PyTorch detects your GPU with `torch.cuda.is_available()`. Install CUDA toolkit if needed.
@@ -342,6 +368,9 @@ python inference.py --model_path best_model.pt --prompt "There was" --temperatur
 --
 
 python train.py --text_file stories_1M_paras.txt --resume best_model.pt --epochs 25 --batch_size 18 --model_dim 256 --lr 2e-4 --seq_len 512 --gradient_accumulation_steps 512
+
+python train.py --text_file stories.txt --resume best_model.pt --epochs 25 --batch_size 19 --model_dim 256 --lr 5e-4 --seq_len 512 --gradient_accumulation_steps 2
+
 
 
 ```
